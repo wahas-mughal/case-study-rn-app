@@ -33,3 +33,7 @@ export function buildProductSearchUrl({
 
   return `products/search?${params.toString()}`;
 }
+
+export function buildProductUrl(id: number): string {
+  return `products/${id}`;
+}
