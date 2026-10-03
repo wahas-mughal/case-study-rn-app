@@ -1,4 +1,5 @@
 import { API_BASE_URL, request } from '../../../shared/api/client';
+import { getRepository } from '../../../shared/db/repository';
 import {
   buildCategoriesUrl,
   buildProductSearchUrl,
@@ -75,6 +76,15 @@ export function toCategories(response: CategoryResponse[]): Category[] {
   });
 }
 
+async function cacheProducts(queryFulfilled: Promise<{ data: ProductsPage }>) {
+  try {
+    const { data } = await queryFulfilled;
+    getRepository().upsertProducts(data.products);
+  } catch {
+    // A failed cache write must not replace the query result.
+  }
+}
+
 function queryError(error: unknown, fallback: string) {
   const message = error instanceof Error ? error.message : fallback;
   return { error: { status: 'CUSTOM_ERROR' as const, error: message } };
@@ -93,6 +103,9 @@ const catalogApi = baseApi.injectEndpoints({
           return queryError(error, 'Failed to fetch products');
         }
       },
+      async onQueryStarted(_query, { queryFulfilled }) {
+        await cacheProducts(queryFulfilled);
+      },
     }),
     searchProducts: builder.query<ProductsPage, ProductSearchQuery>({
       queryFn: async query => {
@@ -105,6 +118,9 @@ const catalogApi = baseApi.injectEndpoints({
           return queryError(error, 'Failed to search products');
         }
       },
+      async onQueryStarted(_query, { queryFulfilled }) {
+        await cacheProducts(queryFulfilled);
+      },
     }),
     getCategories: builder.query<Category[], void>({
       queryFn: async () => {
@@ -115,6 +131,14 @@ const catalogApi = baseApi.injectEndpoints({
           return { data: toCategories(response) };
         } catch (error) {
           return queryError(error, 'Failed to fetch categories');
+        }
+      },
+      async onQueryStarted(_query, { queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          getRepository().upsertCategories(data);
+        } catch {
+          // A failed cache write must not replace the query result.
         }
       },
     }),

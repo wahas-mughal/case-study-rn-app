@@ -1,4 +1,5 @@
 import { request } from '../../../shared/api/client';
+import { getRepository } from '../../../shared/db/repository';
 import { buildProductUrl } from '../../../shared/api/url';
 import { baseApi } from '../../../shared/api/baseApi';
 import type { Product } from '../../catalog';
@@ -37,6 +38,14 @@ const productDetailApi = baseApi.injectEndpoints({
           return { data: toProduct(response) };
         } catch (error) {
           return queryError(error, 'Failed to fetch product');
+        }
+      },
+      async onQueryStarted(_id, { queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          getRepository().upsertProducts([data]);
+        } catch {
+          // A failed cache write must not replace the query result.
         }
       },
     }),
