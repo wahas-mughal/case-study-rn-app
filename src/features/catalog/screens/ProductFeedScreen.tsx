@@ -9,8 +9,13 @@ import {
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 
-import { useGetProductsQuery } from '../api/catalogApi';
+import {
+  SEARCH_DEBOUNCE_MS,
+  useDebouncedValue,
+} from '../../../shared/hooks/useDebouncedValue';
+import { useGetProductsQuery, useSearchProductsQuery } from '../api/catalogApi';
 import { ProductCard } from '../components/ProductCard';
+import { SearchBar } from '../components/SearchBar';
 import { PRODUCT_PAGE_SIZE, type Product } from '../model/types';
 
 function keyExtractor(product: Product) {
@@ -19,13 +24,29 @@ function keyExtractor(product: Product) {
 
 export function ProductFeedScreen() {
   const isDarkMode = useColorScheme() === 'dark';
+  const [searchText, setSearchText] = useState('');
+  const debouncedSearch = useDebouncedValue(searchText, SEARCH_DEBOUNCE_MS);
+  const trimmedSearch = debouncedSearch.trim();
+  const isSearching = trimmedSearch.length > 0;
   const [skip, setSkip] = useState(0);
-  const { data, isLoading, isFetching, isError, refetch } = useGetProductsQuery(
-    {
-      limit: PRODUCT_PAGE_SIZE,
-      skip,
-    },
+  const [appliedSearch, setAppliedSearch] = useState(trimmedSearch);
+
+  if (appliedSearch !== trimmedSearch) {
+    setAppliedSearch(trimmedSearch);
+    setSkip(0);
+  }
+
+  const listQuery = useGetProductsQuery(
+    { limit: PRODUCT_PAGE_SIZE, skip },
+    { skip: isSearching },
   );
+  const searchQuery = useSearchProductsQuery(
+    { q: trimmedSearch, limit: PRODUCT_PAGE_SIZE, skip },
+    { skip: !isSearching },
+  );
+  const { data, isLoading, isFetching, isError, refetch } = isSearching
+    ? searchQuery
+    : listQuery;
   const products = data?.products ?? [];
 
   const renderItem = useCallback(
@@ -41,17 +62,32 @@ export function ProductFeedScreen() {
     setSkip(data.skip + data.limit);
   }, [data, isFetching]);
 
+  let body = (
+    <FlashList
+      data={products}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
+      onEndReached={loadMore}
+      onEndReachedThreshold={0.5}
+      ListFooterComponent={
+        isFetching ? (
+          <ActivityIndicator style={styles.footer} />
+        ) : (
+          <View style={styles.footer} />
+        )
+      }
+    />
+  );
+
   if (isLoading && products.length === 0) {
-    return (
-      <View style={[styles.centered, isDarkMode ? styles.screenDark : null]}>
+    body = (
+      <View style={styles.centered}>
         <ActivityIndicator />
       </View>
     );
-  }
-
-  if (isError && products.length === 0) {
-    return (
-      <View style={[styles.centered, isDarkMode ? styles.screenDark : null]}>
+  } else if (isError && products.length === 0) {
+    body = (
+      <View style={styles.centered}>
         <Text style={[styles.message, isDarkMode ? styles.messageDark : null]}>
           Products could not be loaded.
         </Text>
@@ -60,24 +96,20 @@ export function ProductFeedScreen() {
         </Pressable>
       </View>
     );
+  } else if (!isFetching && products.length === 0) {
+    body = (
+      <View style={styles.centered}>
+        <Text style={[styles.message, isDarkMode ? styles.messageDark : null]}>
+          No products found.
+        </Text>
+      </View>
+    );
   }
 
   return (
     <View style={[styles.screen, isDarkMode ? styles.screenDark : null]}>
-      <FlashList
-        data={products}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={
-          isFetching ? (
-            <ActivityIndicator style={styles.footer} />
-          ) : (
-            <View style={styles.footer} />
-          )
-        }
-      />
+      <SearchBar value={searchText} onChangeText={setSearchText} />
+      {body}
     </View>
   );
 }
