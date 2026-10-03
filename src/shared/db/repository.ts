@@ -1,8 +1,26 @@
-import type { Category, Product } from '../../features/catalog';
+import type {
+  Category,
+  Product,
+  ProductSearchQuery,
+  ProductsQuery,
+} from '../../features/catalog';
+
+export type FeedEndpoint = 'getProducts' | 'searchProducts';
+
+export type FeedRecord = {
+  endpoint: FeedEndpoint;
+  args: ProductsQuery | ProductSearchQuery;
+  productIds: number[];
+  total: number;
+  skip: number;
+  limit: number;
+};
 
 export type CatalogRepository = {
   upsertProducts: (products: Product[]) => void;
   upsertCategories: (categories: Category[]) => void;
+  saveFeed: (feed: FeedRecord) => void;
+  readLatestFeed: () => FeedRecord | null;
   readProducts: () => Product[];
   readProduct: (id: number) => Product | null;
   readCategories: () => Category[];
