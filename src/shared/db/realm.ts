@@ -2,12 +2,18 @@ import Realm from 'realm';
 
 import {
   CategorySchema,
+  FeedSnapshotSchema,
   ProductSchema,
 } from '../../features/catalog/data/schemas';
 import type { Category, Product } from '../../features/catalog';
-import { setRepository, type CatalogRepository } from './repository';
+import {
+  setRepository,
+  type CatalogRepository,
+  type FeedEndpoint,
+  type FeedRecord,
+} from './repository';
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 type ProductRow = {
   id: number;
@@ -26,6 +32,17 @@ type CategoryRow = {
   slug: string;
   name: string;
   url: string;
+};
+
+type FeedRow = {
+  queryKey: string;
+  endpoint: string;
+  argsJson: string;
+  productIdsJson: string;
+  total: number;
+  skip: number;
+  limit: number;
+  updatedAt: Date;
 };
 
 function readImages(imagesJson: string): string[] {
@@ -62,6 +79,47 @@ function toCategory(row: CategoryRow): Category {
     name: row.name,
     url: row.url,
   };
+}
+
+function readIds(productIdsJson: string): number[] {
+  try {
+    const parsed: unknown = JSON.parse(productIdsJson);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter((item): item is number => typeof item === 'number');
+  } catch {
+    return [];
+  }
+}
+
+function isFeedEndpoint(endpoint: string): endpoint is FeedEndpoint {
+  return endpoint === 'getProducts' || endpoint === 'searchProducts';
+}
+
+function toFeed(row: FeedRow): FeedRecord | null {
+  if (!isFeedEndpoint(row.endpoint)) {
+    return null;
+  }
+
+  try {
+    const args: unknown = JSON.parse(row.argsJson);
+    if (!args || typeof args !== 'object') {
+      return null;
+    }
+
+    return {
+      endpoint: row.endpoint,
+      args: args as FeedRecord['args'],
+      productIds: readIds(row.productIdsJson),
+      total: row.total,
+      skip: row.skip,
+      limit: row.limit,
+    };
+  } catch {
+    return null;
+  }
 }
 
 function createRealmRepository(realm: Realm): CatalogRepository {
@@ -113,13 +171,39 @@ function createRealmRepository(realm: Realm): CatalogRepository {
         toCategory,
       );
     },
+    saveFeed(feed) {
+      const argsJson = JSON.stringify(feed.args);
+      realm.write(() => {
+        realm.create(
+          FeedSnapshotSchema.name,
+          {
+            queryKey: `${feed.endpoint}:${argsJson}`,
+            endpoint: feed.endpoint,
+            argsJson,
+            productIdsJson: JSON.stringify(feed.productIds),
+            total: feed.total,
+            skip: feed.skip,
+            limit: feed.limit,
+            updatedAt: new Date(),
+          },
+          Realm.UpdateMode.Modified,
+        );
+      });
+    },
+    readLatestFeed() {
+      const latest = realm
+        .objects<FeedRow>(FeedSnapshotSchema.name)
+        .sorted('updatedAt', true)[0];
+
+      return latest ? toFeed(latest) : null;
+    },
   };
 }
 
 export function openCatalogRepository(): CatalogRepository {
   const realm = new Realm({
     path: 'catalog.realm',
-    schema: [ProductSchema, CategorySchema],
+    schema: [ProductSchema, CategorySchema, FeedSnapshotSchema],
     schemaVersion: SCHEMA_VERSION,
   });
   const repository = createRealmRepository(realm);

@@ -76,10 +76,23 @@ export function toCategories(response: CategoryResponse[]): Category[] {
   });
 }
 
-async function cacheProducts(queryFulfilled: Promise<{ data: ProductsPage }>) {
+async function cacheProducts(
+  queryFulfilled: Promise<{ data: ProductsPage }>,
+  endpoint: 'getProducts' | 'searchProducts',
+  args: ProductsQuery | ProductSearchQuery,
+) {
   try {
     const { data } = await queryFulfilled;
-    getRepository().upsertProducts(data.products);
+    const repository = getRepository();
+    repository.upsertProducts(data.products);
+    repository.saveFeed({
+      endpoint,
+      args,
+      productIds: data.products.map(product => product.id),
+      total: data.total,
+      skip: data.skip,
+      limit: data.limit,
+    });
   } catch {
     // A failed cache write must not replace the query result.
   }
@@ -90,7 +103,7 @@ function queryError(error: unknown, fallback: string) {
   return { error: { status: 'CUSTOM_ERROR' as const, error: message } };
 }
 
-const catalogApi = baseApi.injectEndpoints({
+export const catalogApi = baseApi.injectEndpoints({
   endpoints: builder => ({
     getProducts: builder.query<ProductsPage, ProductsQuery>({
       queryFn: async query => {
@@ -103,8 +116,8 @@ const catalogApi = baseApi.injectEndpoints({
           return queryError(error, 'Failed to fetch products');
         }
       },
-      async onQueryStarted(_query, { queryFulfilled }) {
-        await cacheProducts(queryFulfilled);
+      async onQueryStarted(query, { queryFulfilled }) {
+        await cacheProducts(queryFulfilled, 'getProducts', query);
       },
     }),
     searchProducts: builder.query<ProductsPage, ProductSearchQuery>({
@@ -118,8 +131,8 @@ const catalogApi = baseApi.injectEndpoints({
           return queryError(error, 'Failed to search products');
         }
       },
-      async onQueryStarted(_query, { queryFulfilled }) {
-        await cacheProducts(queryFulfilled);
+      async onQueryStarted(query, { queryFulfilled }) {
+        await cacheProducts(queryFulfilled, 'searchProducts', query);
       },
     }),
     getCategories: builder.query<Category[], void>({
@@ -145,8 +158,16 @@ const catalogApi = baseApi.injectEndpoints({
   }),
 });
 
-export const {
-  useGetCategoriesQuery,
-  useGetProductsQuery,
-  useSearchProductsQuery,
-} = catalogApi;
+const revalidate = { refetchOnMountOrArgChange: true } as const;
+
+export function useGetProductsQuery(query: ProductsQuery) {
+  return catalogApi.useGetProductsQuery(query, revalidate);
+}
+
+export function useSearchProductsQuery(query: ProductSearchQuery) {
+  return catalogApi.useSearchProductsQuery(query, revalidate);
+}
+
+export function useGetCategoriesQuery() {
+  return catalogApi.useGetCategoriesQuery(undefined, revalidate);
+}

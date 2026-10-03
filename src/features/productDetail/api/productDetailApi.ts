@@ -29,7 +29,7 @@ function queryError(error: unknown, fallback: string) {
   return { error: { status: 'CUSTOM_ERROR' as const, error: message } };
 }
 
-const productDetailApi = baseApi.injectEndpoints({
+export const productDetailApi = baseApi.injectEndpoints({
   endpoints: builder => ({
     getProduct: builder.query<Product, number>({
       queryFn: async id => {
@@ -52,4 +52,8 @@ const productDetailApi = baseApi.injectEndpoints({
   }),
 });
 
-export const { useGetProductQuery } = productDetailApi;
+export function useGetProductQuery(id: number) {
+  return productDetailApi.useGetProductQuery(id, {
+    refetchOnMountOrArgChange: true,
+  });
+}

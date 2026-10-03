@@ -15,6 +15,21 @@ export const ProductSchema = {
   },
 };
 
+export const FeedSnapshotSchema = {
+  name: 'FeedSnapshot',
+  primaryKey: 'queryKey',
+  properties: {
+    queryKey: 'string',
+    endpoint: 'string',
+    argsJson: 'string',
+    productIdsJson: 'string',
+    total: 'int',
+    skip: 'int',
+    limit: 'int',
+    updatedAt: 'date',
+  },
+};
+
 export const CategorySchema = {
   name: 'Category',
   primaryKey: 'slug',
