@@ -98,6 +98,25 @@ async function cacheProducts(
   }
 }
 
+function mergeProductPage(
+  currentCache: ProductsPage,
+  response: ProductsPage,
+  skip: number,
+) {
+  if (skip === 0) {
+    currentCache.products = response.products;
+    currentCache.total = response.total;
+    currentCache.skip = response.skip;
+    currentCache.limit = response.limit;
+    return;
+  }
+
+  currentCache.products.push(...response.products);
+  currentCache.total = response.total;
+  currentCache.skip = response.skip;
+  currentCache.limit = response.limit;
+}
+
 function queryError(error: unknown, fallback: string) {
   const message = error instanceof Error ? error.message : fallback;
   return { error: { status: 'CUSTOM_ERROR' as const, error: message } };
@@ -109,18 +128,7 @@ export const catalogApi = baseApi.injectEndpoints({
       serializeQueryArgs: ({ endpointName, queryArgs }) =>
         `${endpointName}(${queryArgs.limit})`,
       merge: (currentCache, response, { arg }) => {
-        if (arg.skip === 0) {
-          currentCache.products = response.products;
-          currentCache.total = response.total;
-          currentCache.skip = response.skip;
-          currentCache.limit = response.limit;
-          return;
-        }
-
-        currentCache.products.push(...response.products);
-        currentCache.total = response.total;
-        currentCache.skip = response.skip;
-        currentCache.limit = response.limit;
+        mergeProductPage(currentCache, response, arg.skip);
       },
       forceRefetch: ({ currentArg, previousArg }) =>
         currentArg?.skip !== previousArg?.skip,
@@ -139,6 +147,13 @@ export const catalogApi = baseApi.injectEndpoints({
       },
     }),
     searchProducts: builder.query<ProductsPage, ProductSearchQuery>({
+      serializeQueryArgs: ({ endpointName, queryArgs }) =>
+        `${endpointName}(${queryArgs.q}:${queryArgs.limit})`,
+      merge: (currentCache, response, { arg }) => {
+        mergeProductPage(currentCache, response, arg.skip);
+      },
+      forceRefetch: ({ currentArg, previousArg }) =>
+        currentArg?.skip !== previousArg?.skip,
       queryFn: async query => {
         try {
           const response = await request<ProductsResponse>(
@@ -178,12 +193,28 @@ export const catalogApi = baseApi.injectEndpoints({
 
 const revalidate = { refetchOnMountOrArgChange: true } as const;
 
-export function useGetProductsQuery(query: ProductsQuery) {
-  return catalogApi.useGetProductsQuery(query, revalidate);
+type QueryOptions = {
+  skip?: boolean;
+};
+
+export function useGetProductsQuery(
+  query: ProductsQuery,
+  options?: QueryOptions,
+) {
+  return catalogApi.useGetProductsQuery(query, {
+    ...revalidate,
+    skip: options?.skip,
+  });
 }
 
-export function useSearchProductsQuery(query: ProductSearchQuery) {
-  return catalogApi.useSearchProductsQuery(query, revalidate);
+export function useSearchProductsQuery(
+  query: ProductSearchQuery,
+  options?: QueryOptions,
+) {
+  return catalogApi.useSearchProductsQuery(query, {
+    ...revalidate,
+    skip: options?.skip,
+  });
 }
 
 export function useGetCategoriesQuery() {
