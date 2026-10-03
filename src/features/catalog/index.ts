@@ -3,6 +3,7 @@ export {
   useGetProductsQuery,
   useSearchProductsQuery,
 } from './api/catalogApi';
+export { ProductFeedScreen } from './screens/ProductFeedScreen';
 export { PRODUCT_PAGE_SIZE } from './model/types';
 export type {
   Category,

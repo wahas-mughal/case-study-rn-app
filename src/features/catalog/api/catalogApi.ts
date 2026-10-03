@@ -106,6 +106,24 @@ function queryError(error: unknown, fallback: string) {
 export const catalogApi = baseApi.injectEndpoints({
   endpoints: builder => ({
     getProducts: builder.query<ProductsPage, ProductsQuery>({
+      serializeQueryArgs: ({ endpointName, queryArgs }) =>
+        `${endpointName}(${queryArgs.limit})`,
+      merge: (currentCache, response, { arg }) => {
+        if (arg.skip === 0) {
+          currentCache.products = response.products;
+          currentCache.total = response.total;
+          currentCache.skip = response.skip;
+          currentCache.limit = response.limit;
+          return;
+        }
+
+        currentCache.products.push(...response.products);
+        currentCache.total = response.total;
+        currentCache.skip = response.skip;
+        currentCache.limit = response.limit;
+      },
+      forceRefetch: ({ currentArg, previousArg }) =>
+        currentArg?.skip !== previousArg?.skip,
       queryFn: async query => {
         try {
           const response = await request<ProductsResponse>(
