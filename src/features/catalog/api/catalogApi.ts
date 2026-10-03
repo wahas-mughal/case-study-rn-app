@@ -1,7 +1,20 @@
-import { request } from '../../../shared/api/client';
-import { buildProductsUrl } from '../../../shared/api/url';
+import { API_BASE_URL, request } from '../../../shared/api/client';
+import { buildCategoriesUrl, buildProductsUrl } from '../../../shared/api/url';
 import { baseApi } from '../../../shared/api/baseApi';
-import type { Product, ProductsPage, ProductsQuery } from '../model/types';
+import type {
+  Category,
+  Product,
+  ProductsPage,
+  ProductsQuery,
+} from '../model/types';
+
+type CategoryResponse =
+  | string
+  | {
+      slug: string;
+      name: string;
+      url: string;
+    };
 
 type ProductResponse = Product & {
   brand?: string | null;
@@ -39,6 +52,29 @@ export function toProductsPage(response: ProductsResponse): ProductsPage {
   };
 }
 
+export function toCategories(response: CategoryResponse[]): Category[] {
+  return response.map(category => {
+    if (typeof category === 'string') {
+      return {
+        slug: category,
+        name: category,
+        url: `${API_BASE_URL}products/category/${encodeURIComponent(category)}`,
+      };
+    }
+
+    return {
+      slug: category.slug,
+      name: category.name,
+      url: category.url,
+    };
+  });
+}
+
+function queryError(error: unknown, fallback: string) {
+  const message = error instanceof Error ? error.message : fallback;
+  return { error: { status: 'CUSTOM_ERROR' as const, error: message } };
+}
+
 const catalogApi = baseApi.injectEndpoints({
   endpoints: builder => ({
     getProducts: builder.query<ProductsPage, ProductsQuery>({
@@ -49,13 +85,23 @@ const catalogApi = baseApi.injectEndpoints({
           );
           return { data: toProductsPage(response) };
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : 'Failed to fetch products';
-          return { error: { status: 'CUSTOM_ERROR', error: message } };
+          return queryError(error, 'Failed to fetch products');
+        }
+      },
+    }),
+    getCategories: builder.query<Category[], void>({
+      queryFn: async () => {
+        try {
+          const response = await request<CategoryResponse[]>(
+            buildCategoriesUrl(),
+          );
+          return { data: toCategories(response) };
+        } catch (error) {
+          return queryError(error, 'Failed to fetch categories');
         }
       },
     }),
   }),
 });
 
-export const { useGetProductsQuery } = catalogApi;
+export const { useGetCategoriesQuery, useGetProductsQuery } = catalogApi;

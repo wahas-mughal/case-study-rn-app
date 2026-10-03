@@ -11,3 +11,7 @@ export function buildProductsUrl({ limit, skip }: ProductsUrlArgs): string {
 
   return `products?${params.toString()}`;
 }
+
+export function buildCategoriesUrl(): string {
+  return 'products/categories';
+}
