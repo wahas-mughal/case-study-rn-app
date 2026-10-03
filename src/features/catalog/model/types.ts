@@ -25,6 +25,10 @@ export type ProductsQuery = {
   skip: number;
 };
 
+export type ProductSearchQuery = ProductsQuery & {
+  q: string;
+};
+
 export type Category = {
   slug: string;
   name: string;

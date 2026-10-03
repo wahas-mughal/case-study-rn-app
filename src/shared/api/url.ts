@@ -15,3 +15,21 @@ export function buildProductsUrl({ limit, skip }: ProductsUrlArgs): string {
 export function buildCategoriesUrl(): string {
   return 'products/categories';
 }
+
+export type ProductSearchUrlArgs = ProductsUrlArgs & {
+  q: string;
+};
+
+export function buildProductSearchUrl({
+  q,
+  limit,
+  skip,
+}: ProductSearchUrlArgs): string {
+  const params = new URLSearchParams({
+    q,
+    limit: String(limit),
+    skip: String(skip),
+  });
+
+  return `products/search?${params.toString()}`;
+}
