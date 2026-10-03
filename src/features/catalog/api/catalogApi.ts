@@ -1,9 +1,14 @@
 import { API_BASE_URL, request } from '../../../shared/api/client';
-import { buildCategoriesUrl, buildProductsUrl } from '../../../shared/api/url';
+import {
+  buildCategoriesUrl,
+  buildProductSearchUrl,
+  buildProductsUrl,
+} from '../../../shared/api/url';
 import { baseApi } from '../../../shared/api/baseApi';
 import type {
   Category,
   Product,
+  ProductSearchQuery,
   ProductsPage,
   ProductsQuery,
 } from '../model/types';
@@ -89,6 +94,18 @@ const catalogApi = baseApi.injectEndpoints({
         }
       },
     }),
+    searchProducts: builder.query<ProductsPage, ProductSearchQuery>({
+      queryFn: async query => {
+        try {
+          const response = await request<ProductsResponse>(
+            buildProductSearchUrl(query),
+          );
+          return { data: toProductsPage(response) };
+        } catch (error) {
+          return queryError(error, 'Failed to search products');
+        }
+      },
+    }),
     getCategories: builder.query<Category[], void>({
       queryFn: async () => {
         try {
@@ -104,4 +121,8 @@ const catalogApi = baseApi.injectEndpoints({
   }),
 });
 
-export const { useGetCategoriesQuery, useGetProductsQuery } = catalogApi;
+export const {
+  useGetCategoriesQuery,
+  useGetProductsQuery,
+  useSearchProductsQuery,
+} = catalogApi;
