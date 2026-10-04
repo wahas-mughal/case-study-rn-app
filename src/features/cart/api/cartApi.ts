@@ -41,6 +41,8 @@ export const cartApi = baseApi.injectEndpoints({
   }),
 });
 
-export function useAddToCartMutation() {
-  return cartApi.useAddToCartMutation();
+export function useAddToCartMutation(productId: number) {
+  return cartApi.useAddToCartMutation({
+    fixedCacheKey: `add-to-cart-${productId}`,
+  });
 }

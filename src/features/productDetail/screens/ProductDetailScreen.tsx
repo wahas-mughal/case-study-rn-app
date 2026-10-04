@@ -30,7 +30,8 @@ export function ProductDetailScreen({ route, navigation }: ProductDetailProps) {
     refetch,
   } = useGetProductQuery(productId);
   const [addToCart, { isLoading: isAdding, isSuccess, isError: isAddError }] =
-    useAddToCartMutation();
+    useAddToCartMutation(productId);
+  const cartLocked = isAdding || isSuccess;
 
   useLayoutEffect(() => {
     if (product?.title) {
@@ -93,13 +94,12 @@ export function ProductDetailScreen({ route, navigation }: ProductDetailProps) {
         >
           {product.description}
         </Text>
-      </ScrollView>
-      <View style={[styles.footer, isDarkMode ? styles.footerDark : null]}>
         <Pressable
           accessibilityRole="button"
-          disabled={isAdding}
+          accessibilityState={{ disabled: cartLocked }}
+          disabled={cartLocked}
           onPress={() => addToCart({ productId: product.id })}
-          style={[styles.button, isAdding ? styles.buttonDisabled : null]}
+          style={[styles.button, cartLocked ? styles.buttonDisabled : null]}
         >
           <Text style={styles.buttonLabel}>
             {isAdding ? 'Adding…' : isSuccess ? 'Added to cart' : 'Add to cart'}
@@ -110,7 +110,7 @@ export function ProductDetailScreen({ route, navigation }: ProductDetailProps) {
             Could not add this product to the cart.
           </Text>
         ) : null}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   content: {
-    paddingBottom: 24,
+    paddingBottom: 32,
   },
   image: {
     width: '100%',
@@ -185,22 +185,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#007aff',
   },
-  footer: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#d1d1d6',
-    backgroundColor: '#ffffff',
-  },
-  footerDark: {
-    borderTopColor: '#3a3a3c',
-    backgroundColor: '#1c1c1e',
-  },
   button: {
     alignItems: 'center',
     justifyContent: 'center',
     height: 48,
+    marginTop: 24,
+    marginHorizontal: 16,
     borderRadius: 12,
     backgroundColor: '#007aff',
   },
@@ -214,6 +204,7 @@ const styles = StyleSheet.create({
   },
   error: {
     marginTop: 8,
+    marginHorizontal: 16,
     fontSize: 14,
     textAlign: 'center',
     color: '#ff3b30',
