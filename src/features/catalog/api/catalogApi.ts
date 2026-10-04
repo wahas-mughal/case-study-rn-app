@@ -98,6 +98,23 @@ async function cacheProducts(
   }
 }
 
+function listCacheKey(query: ProductsQuery): string {
+  return `${query.category ?? ''}:${query.sortBy ?? ''}:${query.order ?? ''}:${
+    query.limit
+  }`;
+}
+
+function filterByCategory(page: ProductsPage, category?: string): ProductsPage {
+  if (!category) {
+    return page;
+  }
+
+  return {
+    ...page,
+    products: page.products.filter(product => product.category === category),
+  };
+}
+
 function mergeProductPage(
   currentCache: ProductsPage,
   response: ProductsPage,
@@ -126,7 +143,7 @@ export const catalogApi = baseApi.injectEndpoints({
   endpoints: builder => ({
     getProducts: builder.query<ProductsPage, ProductsQuery>({
       serializeQueryArgs: ({ endpointName, queryArgs }) =>
-        `${endpointName}(${queryArgs.limit})`,
+        `${endpointName}(${listCacheKey(queryArgs)})`,
       merge: (currentCache, response, { arg }) => {
         mergeProductPage(currentCache, response, arg.skip);
       },
@@ -148,7 +165,7 @@ export const catalogApi = baseApi.injectEndpoints({
     }),
     searchProducts: builder.query<ProductsPage, ProductSearchQuery>({
       serializeQueryArgs: ({ endpointName, queryArgs }) =>
-        `${endpointName}(${queryArgs.q}:${queryArgs.limit})`,
+        `${endpointName}(${queryArgs.q}:${listCacheKey(queryArgs)})`,
       merge: (currentCache, response, { arg }) => {
         mergeProductPage(currentCache, response, arg.skip);
       },
@@ -156,10 +173,11 @@ export const catalogApi = baseApi.injectEndpoints({
         currentArg?.skip !== previousArg?.skip,
       queryFn: async query => {
         try {
+          const { category, ...urlQuery } = query;
           const response = await request<ProductsResponse>(
-            buildProductSearchUrl(query),
+            buildProductSearchUrl(urlQuery),
           );
-          return { data: toProductsPage(response) };
+          return { data: filterByCategory(toProductsPage(response), category) };
         } catch (error) {
           return queryError(error, 'Failed to search products');
         }
