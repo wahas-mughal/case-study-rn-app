@@ -12,7 +12,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../../../app/navigation/types';
 import { CachedImage } from '../../../shared/components/CachedImage';
-import { useAddToCartMutation } from '../../cart';
+import { hasQueuedAdd, useAddToCartMutation } from '../../cart';
 import { useGetProductQuery } from '../api/productDetailApi';
 
 type ProductDetailProps = NativeStackScreenProps<
@@ -31,7 +31,7 @@ export function ProductDetailScreen({ route, navigation }: ProductDetailProps) {
   } = useGetProductQuery(productId);
   const [addToCart, { isLoading: isAdding, isSuccess, isError: isAddError }] =
     useAddToCartMutation(productId);
-  const cartLocked = isAdding || isSuccess;
+  const cartLocked = isAdding || isSuccess || hasQueuedAdd(productId);
 
   useLayoutEffect(() => {
     if (product?.title) {
@@ -102,7 +102,11 @@ export function ProductDetailScreen({ route, navigation }: ProductDetailProps) {
           style={[styles.button, cartLocked ? styles.buttonDisabled : null]}
         >
           <Text style={styles.buttonLabel}>
-            {isAdding ? 'Adding…' : isSuccess ? 'Added to cart' : 'Add to cart'}
+            {isAdding
+              ? 'Adding…'
+              : cartLocked
+              ? 'Added to cart'
+              : 'Add to cart'}
           </Text>
         </Pressable>
         {isAddError ? (

@@ -8,6 +8,10 @@ export function selectNetworkStatus(state: NetworkSliceState): NetworkStatus {
   return state.network.status;
 }
 
+export function selectBannerVisible(state: NetworkSliceState): boolean {
+  return state.network.bannerVisible;
+}
+
 export function selectBannerMessage(state: NetworkSliceState): string {
   switch (state.network.status) {
     case 'offline':
