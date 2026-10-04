@@ -81,6 +81,7 @@ export function ProductFeedScreen() {
 
   let body = (
     <FlashList
+      style={styles.list}
       data={products}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
@@ -145,8 +146,8 @@ export function ProductFeedScreen() {
   ];
   const sortChips = [
     { id: '', label: 'Default' },
-    { id: 'price-asc', label: 'Price ↑' },
-    { id: 'price-desc', label: 'Price ↓' },
+    { id: 'price-desc', label: 'Price ↑' },
+    { id: 'price-asc', label: 'Price ↓' },
     { id: 'rating-desc', label: 'Top rated' },
   ];
 
@@ -175,6 +176,9 @@ const styles = StyleSheet.create({
   },
   screenDark: {
     backgroundColor: '#1c1c1e',
+  },
+  list: {
+    flex: 1,
   },
   centered: {
     flex: 1,

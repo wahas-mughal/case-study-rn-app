@@ -24,6 +24,7 @@ export function FilterChips({ chips, selectedId, onSelect }: FilterChipsProps) {
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      style={styles.scroller}
       contentContainerStyle={styles.row}
     >
       {chips.map(chip => {
@@ -56,11 +57,17 @@ export function FilterChips({ chips, selectedId, onSelect }: FilterChipsProps) {
 }
 
 const styles = StyleSheet.create({
+  scroller: {
+    flexGrow: 0,
+    flexShrink: 0,
+  },
   row: {
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 8,
   },
   chip: {
+    alignSelf: 'flex-start',
     marginRight: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,
