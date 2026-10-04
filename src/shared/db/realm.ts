@@ -1,5 +1,7 @@
 import Realm from 'realm';
 
+import { QueuedActionSchema } from '../../features/cart/data/queuedActionSchema';
+import type { QueuedAction } from '../../features/cart/model/types';
 import {
   CachedImageSchema,
   CategorySchema,
@@ -14,7 +16,7 @@ import {
   type FeedRecord,
 } from './repository';
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 type ProductRow = {
   id: number;
@@ -33,6 +35,14 @@ type CategoryRow = {
   slug: string;
   name: string;
   url: string;
+};
+
+type QueuedActionRow = {
+  id: string;
+  type: string;
+  productId: number;
+  quantity: number;
+  createdAt: Date;
 };
 
 type CachedImageRow = {
@@ -219,6 +229,46 @@ function createRealmRepository(realm: Realm): CatalogRepository {
         );
       });
     },
+    enqueueAction(action) {
+      realm.write(() => {
+        realm.create(
+          QueuedActionSchema.name,
+          action,
+          Realm.UpdateMode.Modified,
+        );
+      });
+    },
+    readQueuedActions() {
+      return Array.from(realm.objects<QueuedActionRow>(QueuedActionSchema.name))
+        .map(toQueuedAction)
+        .sort(
+          (left, right) => left.createdAt.getTime() - right.createdAt.getTime(),
+        );
+    },
+    deleteQueuedAction(id) {
+      const row = realm.objectForPrimaryKey<QueuedActionRow>(
+        QueuedActionSchema.name,
+        id,
+      );
+
+      if (!row) {
+        return;
+      }
+
+      realm.write(() => {
+        realm.delete(row);
+      });
+    },
+  };
+}
+
+function toQueuedAction(row: QueuedActionRow): QueuedAction {
+  return {
+    id: row.id,
+    type: 'addToCart',
+    productId: row.productId,
+    quantity: row.quantity,
+    createdAt: row.createdAt,
   };
 }
 
@@ -230,6 +280,7 @@ export function openCatalogRepository(): CatalogRepository {
       CategorySchema,
       FeedSnapshotSchema,
       CachedImageSchema,
+      QueuedActionSchema,
     ],
     schemaVersion: SCHEMA_VERSION,
     onMigration: () => undefined,

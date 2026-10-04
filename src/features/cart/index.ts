@@ -1,1 +1,6 @@
-export { useAddToCartMutation } from './api/cartApi';
+export {
+  hasQueuedAdd,
+  startCartSync,
+  useAddToCartMutation,
+} from './api/cartApi';
+export type { QueuedAction } from './model/types';

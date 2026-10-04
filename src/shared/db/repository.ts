@@ -1,3 +1,4 @@
+import type { QueuedAction } from '../../features/cart/model/types';
 import type {
   Category,
   Product,
@@ -26,6 +27,9 @@ export type CatalogRepository = {
   readCategories: () => Category[];
   readImage: (url: string) => string | null;
   saveImage: (url: string, dataUri: string) => void;
+  enqueueAction: (action: QueuedAction) => void;
+  readQueuedActions: () => QueuedAction[];
+  deleteQueuedAction: (id: string) => void;
 };
 
 let repository: CatalogRepository | null = null;
