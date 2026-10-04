@@ -33,10 +33,16 @@ npm run ci
 
 ## Architecture
 
-Feature folders own catalog, product detail, cart, and network. They reach each other through each feature's public `index.ts`. Shared code holds the DummyJSON client, the Redux store, and Realm.
+Feature folders own catalog, product detail, cart, and network. Shared code holds the DummyJSON client, the Redux store, and Realm. The planning notes are in [docs/architecture.md](docs/architecture.md).
 
-Launch opens the local Realm database synchronously, copies plain objects into the RTK Query cache, and paints that cache before the network responds. Background revalidation writes the fresh catalog back into Realm.
+### Local caching and instant hydration
 
-Add to cart always stores a `QueuedAction` row in Realm. While online, the app posts it immediately and deletes the row on success. On reconnect, the `flushQueue` mutation replays the remaining rows in order.
+Launch opens the local Realm file before the first screen renders. Saved products, categories, and the latest feed are copied into the RTK Query cache as plain objects, so the feed and product details paint from that cache instead of waiting on DummyJSON. A successful fetch writes the same rows back with an upsert. The next cold start can show the last catalog immediately, then refresh it in the background while the device is online.
 
-The product list is a FlashList v2 on the new architecture. Rows are memoized `ProductCard`s, fed plain objects rather than live Realm results, with a fixed 72×72 image and a stable key from the product id.
+### Offline queue persistence and reconnection handling
+
+Add to cart was not part of the requirements. It is included so the persisted offline queue has a real action to store and replay. Each tap inserts a `QueuedAction` row in Realm before it tries the network. While online, the app posts that row immediately and deletes it only after DummyJSON accepts it. If the device is offline or the post fails, the row stays and the product remains queued. A reachability probe updates online state on a timer, on network changes, and when the app becomes active. Coming back online replays the remaining rows in the order they were created and stops at the first failure, leaving the rest for the next reconnect.
+
+### Virtualized list rendering
+
+The product feed is a FlashList v2 on the new architecture, paged at 20 items. Each row is a memoized `ProductCard` with a stable `renderItem` callback, so unchanged cards are not redrawn while the shopper types or scrolls. Rows are plain objects from the cache, not live Realm results, and each one is keyed by product id. Thumbnails are a fixed 72×72, which keeps row height stable while cells are recycled. The next page is appended when the list nears the end, and a new search or filter starts again at the top.
