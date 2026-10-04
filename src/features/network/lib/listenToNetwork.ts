@@ -18,7 +18,26 @@ function readOnline(state: NetInfoState): boolean | null {
   return false;
 }
 
+const OFFLINE_CHECK_MS = 1000;
+
 export function listenToNetwork(dispatch: NetworkDispatch) {
+  let offlineTimer: ReturnType<typeof setInterval> | undefined;
+
+  const stopOfflineCheck = () => {
+    if (!offlineTimer) {
+      return;
+    }
+
+    clearInterval(offlineTimer);
+    offlineTimer = undefined;
+  };
+
+  const refresh = () => {
+    NetInfo.refresh()
+      .then(publish)
+      .catch(() => undefined);
+  };
+
   const publish = (state: NetInfoState) => {
     const online = readOnline(state);
 
@@ -27,25 +46,17 @@ export function listenToNetwork(dispatch: NetworkDispatch) {
     }
 
     dispatch(setOnline(online));
-  };
 
-  const refresh = () => {
-    NetInfo.refresh()
-      .then(state => {
-        publish(state);
+    if (online) {
+      stopOfflineCheck();
+      return;
+    }
 
-        if (readOnline(state) !== false) {
-          return;
-        }
+    if (offlineTimer) {
+      return;
+    }
 
-        // The first check after returning to the app can still report offline.
-        setTimeout(() => {
-          NetInfo.refresh()
-            .then(publish)
-            .catch(() => undefined);
-        }, 1000);
-      })
-      .catch(() => undefined);
+    offlineTimer = setInterval(refresh, OFFLINE_CHECK_MS);
   };
 
   refresh();
@@ -58,6 +69,7 @@ export function listenToNetwork(dispatch: NetworkDispatch) {
   });
 
   return () => {
+    stopOfflineCheck();
     unsubscribe();
     appState.remove();
   };
