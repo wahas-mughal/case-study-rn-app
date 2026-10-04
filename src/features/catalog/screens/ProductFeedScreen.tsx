@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -7,7 +7,7 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 
 import {
   SEARCH_DEBOUNCE_MS,
@@ -43,16 +43,19 @@ export function ProductFeedScreen() {
   const [skip, setSkip] = useState(0);
   const filterToken = `${trimmedSearch}|${category}|${sort}`;
   const [appliedFilter, setAppliedFilter] = useState(filterToken);
+  const filtersChanged = appliedFilter !== filterToken;
   const { data: categories = [] } = useGetCategoriesQuery();
+  const listRef = useRef<FlashListRef<Product>>(null);
+  const scrolledFilter = useRef(filterToken);
 
-  if (appliedFilter !== filterToken) {
+  if (filtersChanged) {
     setAppliedFilter(filterToken);
     setSkip(0);
   }
 
   const query = {
     limit: PRODUCT_PAGE_SIZE,
-    skip,
+    skip: filtersChanged ? 0 : skip,
     category: category || undefined,
     ...toSortQuery(sort),
   };
@@ -65,6 +68,22 @@ export function ProductFeedScreen() {
     ? searchQuery
     : listQuery;
   const products = data?.products ?? [];
+
+  useLayoutEffect(() => {
+    const list = listRef.current;
+
+    if (scrolledFilter.current === filterToken || !list) {
+      return;
+    }
+
+    scrolledFilter.current = filterToken;
+    list.scrollToTop({ animated: false });
+    const frame = requestAnimationFrame(() => {
+      list.scrollToTop({ animated: false });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [filterToken, data]);
 
   const renderItem = useCallback(
     ({ item }: { item: Product }) => <ProductCard product={item} />,
@@ -82,8 +101,10 @@ export function ProductFeedScreen() {
   let body = (
     <FlashList
       key={filterToken}
+      ref={listRef}
       style={styles.list}
       data={products}
+      maintainVisibleContentPosition={{ disabled: true }}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
       onEndReached={loadMore}
