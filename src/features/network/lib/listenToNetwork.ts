@@ -6,7 +6,7 @@ import { setOnline } from '../model/networkSlice';
 
 type NetworkDispatch = (action: ReturnType<typeof setOnline>) => void;
 
-const CHECK_MS = 1000;
+const CHECK_MS = 5000;
 const PROBE_TIMEOUT_MS = 2000;
 
 function probeOnline(): Promise<boolean> {
