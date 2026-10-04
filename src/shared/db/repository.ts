@@ -24,6 +24,8 @@ export type CatalogRepository = {
   readProducts: () => Product[];
   readProduct: (id: number) => Product | null;
   readCategories: () => Category[];
+  readImage: (url: string) => string | null;
+  saveImage: (url: string, dataUri: string) => void;
 };
 
 let repository: CatalogRepository | null = null;

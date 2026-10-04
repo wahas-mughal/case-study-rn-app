@@ -1,6 +1,5 @@
 import { memo } from 'react';
 import {
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -8,6 +7,7 @@ import {
   View,
 } from 'react-native';
 
+import { CachedImage } from '../../../shared/components/CachedImage';
 import type { Product } from '../model/types';
 
 type ProductCardProps = {
@@ -24,7 +24,7 @@ function ProductCardView({ product, onPress }: ProductCardProps) {
       onPress={() => onPress(product)}
       style={[styles.card, isDarkMode ? styles.cardDark : null]}
     >
-      <Image source={{ uri: product.thumbnail }} style={styles.image} />
+      <CachedImage uri={product.thumbnail} style={styles.image} />
       <View style={styles.copy}>
         <Text
           numberOfLines={2}

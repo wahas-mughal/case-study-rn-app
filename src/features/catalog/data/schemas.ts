@@ -30,6 +30,15 @@ export const FeedSnapshotSchema = {
   },
 };
 
+export const CachedImageSchema = {
+  name: 'CachedImage',
+  primaryKey: 'url',
+  properties: {
+    url: 'string',
+    dataUri: 'string',
+  },
+};
+
 export const CategorySchema = {
   name: 'Category',
   primaryKey: 'slug',
