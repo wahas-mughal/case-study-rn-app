@@ -13,10 +13,20 @@ import {
   SEARCH_DEBOUNCE_MS,
   useDebouncedValue,
 } from '../../../shared/hooks/useDebouncedValue';
-import { useGetProductsQuery, useSearchProductsQuery } from '../api/catalogApi';
+import {
+  useGetCategoriesQuery,
+  useGetProductsQuery,
+  useSearchProductsQuery,
+} from '../api/catalogApi';
+import { FilterChips } from '../components/FilterChips';
 import { ProductCard } from '../components/ProductCard';
 import { SearchBar } from '../components/SearchBar';
-import { PRODUCT_PAGE_SIZE, type Product } from '../model/types';
+import {
+  PRODUCT_PAGE_SIZE,
+  toSortQuery,
+  type Product,
+  type ProductSort,
+} from '../model/types';
 
 function keyExtractor(product: Product) {
   return String(product.id);
@@ -28,20 +38,27 @@ export function ProductFeedScreen() {
   const debouncedSearch = useDebouncedValue(searchText, SEARCH_DEBOUNCE_MS);
   const trimmedSearch = debouncedSearch.trim();
   const isSearching = trimmedSearch.length > 0;
+  const [category, setCategory] = useState('');
+  const [sort, setSort] = useState<ProductSort | ''>('');
   const [skip, setSkip] = useState(0);
-  const [appliedSearch, setAppliedSearch] = useState(trimmedSearch);
+  const filterToken = `${trimmedSearch}|${category}|${sort}`;
+  const [appliedFilter, setAppliedFilter] = useState(filterToken);
+  const { data: categories = [] } = useGetCategoriesQuery();
 
-  if (appliedSearch !== trimmedSearch) {
-    setAppliedSearch(trimmedSearch);
+  if (appliedFilter !== filterToken) {
+    setAppliedFilter(filterToken);
     setSkip(0);
   }
 
-  const listQuery = useGetProductsQuery(
-    { limit: PRODUCT_PAGE_SIZE, skip },
-    { skip: isSearching },
-  );
+  const query = {
+    limit: PRODUCT_PAGE_SIZE,
+    skip,
+    category: category || undefined,
+    ...toSortQuery(sort),
+  };
+  const listQuery = useGetProductsQuery(query, { skip: isSearching });
   const searchQuery = useSearchProductsQuery(
-    { q: trimmedSearch, limit: PRODUCT_PAGE_SIZE, skip },
+    { ...query, q: trimmedSearch },
     { skip: !isSearching },
   );
   const { data, isLoading, isFetching, isError, refetch } = isSearching
@@ -55,7 +72,7 @@ export function ProductFeedScreen() {
   );
 
   const loadMore = useCallback(() => {
-    if (!data || isFetching || data.products.length >= data.total) {
+    if (!data || isFetching || data.skip + data.limit >= data.total) {
       return;
     }
 
@@ -96,6 +113,22 @@ export function ProductFeedScreen() {
         </Pressable>
       </View>
     );
+  } else if (
+    !isFetching &&
+    products.length === 0 &&
+    data &&
+    data.skip + data.limit < data.total
+  ) {
+    body = (
+      <View style={styles.centered}>
+        <Text style={[styles.message, isDarkMode ? styles.messageDark : null]}>
+          No matches on this page.
+        </Text>
+        <Pressable onPress={loadMore} style={styles.retry}>
+          <Text style={styles.retryLabel}>Load more</Text>
+        </Pressable>
+      </View>
+    );
   } else if (!isFetching && products.length === 0) {
     body = (
       <View style={styles.centered}>
@@ -106,9 +139,30 @@ export function ProductFeedScreen() {
     );
   }
 
+  const categoryChips = [
+    { id: '', label: 'All' },
+    ...categories.map(item => ({ id: item.slug, label: item.name })),
+  ];
+  const sortChips = [
+    { id: '', label: 'Default' },
+    { id: 'price-asc', label: 'Price ↑' },
+    { id: 'price-desc', label: 'Price ↓' },
+    { id: 'rating-desc', label: 'Top rated' },
+  ];
+
   return (
     <View style={[styles.screen, isDarkMode ? styles.screenDark : null]}>
       <SearchBar value={searchText} onChangeText={setSearchText} />
+      <FilterChips
+        chips={categoryChips}
+        selectedId={category}
+        onSelect={setCategory}
+      />
+      <FilterChips
+        chips={sortChips}
+        selectedId={sort}
+        onSelect={id => setSort(id as ProductSort | '')}
+      />
       {body}
     </View>
   );

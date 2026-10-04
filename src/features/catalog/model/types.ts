@@ -20,10 +20,33 @@ export type ProductsPage = {
   limit: number;
 };
 
+export type ProductSort = 'price-asc' | 'price-desc' | 'rating-desc';
+
 export type ProductsQuery = {
   limit: number;
   skip: number;
+  category?: string;
+  sortBy?: 'price' | 'rating';
+  order?: 'asc' | 'desc';
 };
+
+export function toSortQuery(
+  sort: ProductSort | '',
+): Pick<ProductsQuery, 'sortBy' | 'order'> {
+  if (sort === 'price-asc') {
+    return { sortBy: 'price', order: 'asc' };
+  }
+
+  if (sort === 'price-desc') {
+    return { sortBy: 'price', order: 'desc' };
+  }
+
+  if (sort === 'rating-desc') {
+    return { sortBy: 'rating', order: 'desc' };
+  }
+
+  return {};
+}
 
 export type ProductSearchQuery = ProductsQuery & {
   q: string;
