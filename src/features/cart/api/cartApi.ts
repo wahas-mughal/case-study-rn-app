@@ -145,6 +145,8 @@ export function useAddToCartMutation(productId: number) {
 }
 
 export function startCartSync(store: SyncStore) {
+  let online = store.getState().network.online;
+
   const flush = () => {
     store.dispatch(
       cartApi.endpoints.flushQueue.initiate(undefined, {
@@ -153,19 +155,22 @@ export function startCartSync(store: SyncStore) {
     );
   };
 
-  if (store.getState().network.online) {
+  if (online) {
     flush();
   }
-
-  let online = store.getState().network.online;
 
   return store.subscribe(() => {
     const nextOnline = store.getState().network.online;
 
-    if (!online && nextOnline) {
-      flush();
+    if (nextOnline === online) {
+      return;
     }
 
+    const becameOnline = nextOnline && !online;
     online = nextOnline;
+
+    if (becameOnline) {
+      flush();
+    }
   });
 }
