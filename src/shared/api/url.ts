@@ -61,3 +61,7 @@ export function buildProductSearchUrl({
 export function buildProductUrl(id: number): string {
   return `products/${id}`;
 }
+
+export function buildAddToCartUrl(): string {
+  return 'carts/add';
+}

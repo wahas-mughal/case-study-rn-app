@@ -57,3 +57,11 @@ export function useGetProductQuery(id: number) {
     refetchOnMountOrArgChange: true,
   });
 }
+
+export function seedProductDetail(product: Product) {
+  return productDetailApi.util.upsertQueryData(
+    'getProduct',
+    product.id,
+    product,
+  );
+}
