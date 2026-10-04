@@ -1,97 +1,48 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Product catalog
 
-# Getting Started
+A TypeScript React Native catalog for [DummyJSON](https://dummyjson.com). The feed pages products, searches as you type, and filters by category, price, and rating. Product details and add-to-cart stay available from the last saved catalog when the device is offline.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+Node 22.11 or newer is required.
 
-## Step 1: Start Metro
+## Run
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
-
-To start the Metro dev server, run the following command from the root of your React Native project:
+Install JavaScript dependencies, then install the iOS pods. Run the pod install again after any native dependency change.
 
 ```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
-```
-
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
+npm install
 bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
 bundle exec pod install
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+Start Metro, then launch a simulator or a connected device from a second terminal:
 
 ```sh
-# Using npm
+npm start
 npm run ios
-
-# OR using Yarn
-yarn ios
+npm run android
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+## Checks
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+`npm run ci` runs ESLint, `tsc --noEmit`, and Jest with the 70% coverage gate. The Husky `pre-commit` hook runs that same script.
 
-## Step 3: Modify your app
+```sh
+npm test
+npm run ci
+```
 
-Now that you have successfully run the app, let's make changes!
+## Architecture
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+Feature folders own catalog, product detail, cart, and network. Shared code holds the DummyJSON client, the Redux store, and Realm. The planning notes are in [docs/architecture.md](docs/architecture.md).
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+### Local caching and instant hydration
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+Launch opens the local Realm file before the first screen renders. Saved products, categories, and the latest feed are copied into the RTK Query cache as plain objects, so the feed and product details paint from that cache instead of waiting on DummyJSON. A successful fetch writes the same rows back with an upsert. The next cold start can show the last catalog immediately, then refresh it in the background while the device is online.
 
-## Congratulations! :tada:
+### Offline queue persistence and reconnection handling
 
-You've successfully run and modified your React Native App. :partying_face:
+Add to cart was not part of the requirements. It is included so the persisted offline queue has a real action to store and replay. Each tap inserts a `QueuedAction` row in Realm before it tries the network. While online, the app posts that row immediately and deletes it only after DummyJSON accepts it. If the device is offline or the post fails, the row stays and the product remains queued. A reachability probe updates online state on a timer, on network changes, and when the app becomes active. Coming back online replays the remaining rows in the order they were created and stops at the first failure, leaving the rest for the next reconnect.
 
-### Now what?
+### Virtualized list rendering
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+The product feed is a FlashList v2 on the new architecture, paged at 20 items. Each row is a memoized `ProductCard` with a stable `renderItem` callback, so unchanged cards are not redrawn while the shopper types or scrolls. Rows are plain objects from the cache, not live Realm results, and each one is keyed by product id. Thumbnails are a fixed 72×72, which keeps row height stable while cells are recycled. The next page is appended when the list nears the end, and a new search or filter starts again at the top.
