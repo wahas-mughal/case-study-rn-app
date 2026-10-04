@@ -81,6 +81,7 @@ export function ProductFeedScreen() {
 
   let body = (
     <FlashList
+      key={filterToken}
       style={styles.list}
       data={products}
       renderItem={renderItem}
