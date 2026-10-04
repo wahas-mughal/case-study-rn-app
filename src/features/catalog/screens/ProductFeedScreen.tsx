@@ -8,7 +8,11 @@ import {
   View,
 } from 'react-native';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
+import type { RootStackParamList } from '../../../app/navigation/types';
+import { useAppDispatch } from '../../../app/store/store';
+import { seedProductDetail } from '../../productDetail';
 import {
   SEARCH_DEBOUNCE_MS,
   useDebouncedValue,
@@ -32,7 +36,13 @@ function keyExtractor(product: Product) {
   return String(product.id);
 }
 
-export function ProductFeedScreen() {
+type ProductFeedProps = NativeStackScreenProps<
+  RootStackParamList,
+  'ProductFeed'
+>;
+
+export function ProductFeedScreen({ navigation }: ProductFeedProps) {
+  const dispatch = useAppDispatch();
   const isDarkMode = useColorScheme() === 'dark';
   const [searchText, setSearchText] = useState('');
   const debouncedSearch = useDebouncedValue(searchText, SEARCH_DEBOUNCE_MS);
@@ -85,9 +95,19 @@ export function ProductFeedScreen() {
     return () => cancelAnimationFrame(frame);
   }, [filterToken, data]);
 
+  const openProduct = useCallback(
+    (product: Product) => {
+      dispatch(seedProductDetail(product));
+      navigation.navigate('ProductDetail', { productId: product.id });
+    },
+    [dispatch, navigation],
+  );
+
   const renderItem = useCallback(
-    ({ item }: { item: Product }) => <ProductCard product={item} />,
-    [],
+    ({ item }: { item: Product }) => (
+      <ProductCard product={item} onPress={openProduct} />
+    ),
+    [openProduct],
   );
 
   const loadMore = useCallback(() => {

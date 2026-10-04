@@ -1,17 +1,29 @@
 import { memo } from 'react';
-import { Image, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import {
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
+} from 'react-native';
 
 import type { Product } from '../model/types';
 
 type ProductCardProps = {
   product: Product;
+  onPress: (product: Product) => void;
 };
 
-function ProductCardView({ product }: ProductCardProps) {
+function ProductCardView({ product, onPress }: ProductCardProps) {
   const isDarkMode = useColorScheme() === 'dark';
 
   return (
-    <View style={[styles.card, isDarkMode ? styles.cardDark : null]}>
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => onPress(product)}
+      style={[styles.card, isDarkMode ? styles.cardDark : null]}
+    >
       <Image source={{ uri: product.thumbnail }} style={styles.image} />
       <View style={styles.copy}>
         <Text
@@ -24,7 +36,7 @@ function ProductCardView({ product }: ProductCardProps) {
           ${product.price.toFixed(2)} · {product.rating.toFixed(1)}
         </Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
