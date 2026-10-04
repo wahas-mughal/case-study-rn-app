@@ -1,4 +1,5 @@
 import { API_BASE_URL, request } from '../../../shared/api/client';
+import { cacheImages } from '../../../shared/images/cacheImage';
 import { getRepository } from '../../../shared/db/repository';
 import {
   buildCategoriesUrl,
@@ -85,6 +86,9 @@ async function cacheProducts(
     const { data } = await queryFulfilled;
     const repository = getRepository();
     repository.upsertProducts(data.products);
+    cacheImages(
+      data.products.flatMap(product => [product.thumbnail, ...product.images]),
+    );
     repository.saveFeed({
       endpoint,
       args,

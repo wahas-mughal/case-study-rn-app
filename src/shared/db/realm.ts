@@ -1,6 +1,7 @@
 import Realm from 'realm';
 
 import {
+  CachedImageSchema,
   CategorySchema,
   FeedSnapshotSchema,
   ProductSchema,
@@ -13,7 +14,7 @@ import {
   type FeedRecord,
 } from './repository';
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 type ProductRow = {
   id: number;
@@ -32,6 +33,11 @@ type CategoryRow = {
   slug: string;
   name: string;
   url: string;
+};
+
+type CachedImageRow = {
+  url: string;
+  dataUri: string;
 };
 
 type FeedRow = {
@@ -197,14 +203,36 @@ function createRealmRepository(realm: Realm): CatalogRepository {
 
       return latest ? toFeed(latest) : null;
     },
+    readImage(url) {
+      const row = realm.objectForPrimaryKey<CachedImageRow>(
+        CachedImageSchema.name,
+        url,
+      );
+      return row?.dataUri ?? null;
+    },
+    saveImage(url, dataUri) {
+      realm.write(() => {
+        realm.create(
+          CachedImageSchema.name,
+          { url, dataUri },
+          Realm.UpdateMode.Modified,
+        );
+      });
+    },
   };
 }
 
 export function openCatalogRepository(): CatalogRepository {
   const realm = new Realm({
     path: 'catalog.realm',
-    schema: [ProductSchema, CategorySchema, FeedSnapshotSchema],
+    schema: [
+      ProductSchema,
+      CategorySchema,
+      FeedSnapshotSchema,
+      CachedImageSchema,
+    ],
     schemaVersion: SCHEMA_VERSION,
+    onMigration: () => undefined,
   });
   const repository = createRealmRepository(realm);
   setRepository(repository);

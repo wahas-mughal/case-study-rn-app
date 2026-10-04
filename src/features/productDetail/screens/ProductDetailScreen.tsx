@@ -1,7 +1,6 @@
 import { useLayoutEffect } from 'react';
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +11,7 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../../../app/navigation/types';
+import { CachedImage } from '../../../shared/components/CachedImage';
 import { useAddToCartMutation } from '../../cart';
 import { useGetProductQuery } from '../api/productDetailApi';
 
@@ -75,7 +75,7 @@ export function ProductDetailScreen({ route, navigation }: ProductDetailProps) {
   return (
     <View style={[styles.screen, isDarkMode ? styles.screenDark : null]}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Image source={{ uri: imageUri }} style={styles.image} />
+        <CachedImage uri={imageUri} style={styles.image} />
         <Text style={[styles.title, isDarkMode ? styles.titleDark : null]}>
           {product.title}
         </Text>

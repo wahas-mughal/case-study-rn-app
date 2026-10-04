@@ -1,4 +1,5 @@
 import { request } from '../../../shared/api/client';
+import { cacheImages } from '../../../shared/images/cacheImage';
 import { getRepository } from '../../../shared/db/repository';
 import { buildProductUrl } from '../../../shared/api/url';
 import { baseApi } from '../../../shared/api/baseApi';
@@ -44,6 +45,7 @@ export const productDetailApi = baseApi.injectEndpoints({
         try {
           const { data } = await queryFulfilled;
           getRepository().upsertProducts([data]);
+          cacheImages([data.thumbnail, ...data.images]);
         } catch {
           // A failed cache write must not replace the query result.
         }
