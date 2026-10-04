@@ -64,7 +64,6 @@ const styles = StyleSheet.create({
   row: {
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingBottom: 8,
   },
   chip: {
     alignSelf: 'flex-start',

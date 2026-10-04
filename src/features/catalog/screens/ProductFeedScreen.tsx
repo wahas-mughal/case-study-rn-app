@@ -154,16 +154,30 @@ export function ProductFeedScreen() {
   return (
     <View style={[styles.screen, isDarkMode ? styles.screenDark : null]}>
       <SearchBar value={searchText} onChangeText={setSearchText} />
-      <FilterChips
-        chips={categoryChips}
-        selectedId={category}
-        onSelect={setCategory}
-      />
-      <FilterChips
-        chips={sortChips}
-        selectedId={sort}
-        onSelect={id => setSort(id as ProductSort | '')}
-      />
+      <View style={styles.filters}>
+        <Text style={[styles.heading, isDarkMode ? styles.headingDark : null]}>
+          Categories
+        </Text>
+        <FilterChips
+          chips={categoryChips}
+          selectedId={category}
+          onSelect={setCategory}
+        />
+        <Text
+          style={[
+            styles.heading,
+            styles.headingSpaced,
+            isDarkMode ? styles.headingDark : null,
+          ]}
+        >
+          Filters
+        </Text>
+        <FilterChips
+          chips={sortChips}
+          selectedId={sort}
+          onSelect={id => setSort(id as ProductSort | '')}
+        />
+      </View>
       {body}
     </View>
   );
@@ -179,6 +193,23 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
+  },
+  filters: {
+    paddingBottom: 12,
+  },
+  heading: {
+    marginTop: 4,
+    marginBottom: 8,
+    marginHorizontal: 16,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1c1c1e',
+  },
+  headingSpaced: {
+    marginTop: 16,
+  },
+  headingDark: {
+    color: '#f2f2f7',
   },
   centered: {
     flex: 1,
