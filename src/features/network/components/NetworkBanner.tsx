@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
 import { StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useSelector } from 'react-redux';
 
-import { selectBannerMessage, selectNetworkStatus } from '../model/banner';
+import {
+  selectBannerMessage,
+  selectBannerVisible,
+  selectNetworkStatus,
+} from '../model/banner';
 import type { NetworkStatus } from '../model/networkSlice';
 
 const lightBackground: Record<NetworkStatus, string> = {
@@ -29,25 +32,11 @@ const darkText: Record<NetworkStatus, string> = {
   syncing: '#b3d7ff',
 };
 
-const ONLINE_BANNER_MS = 2000;
-
 export function NetworkBanner() {
   const isDarkMode = useColorScheme() === 'dark';
   const status = useSelector(selectNetworkStatus);
   const message = useSelector(selectBannerMessage);
-  const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    if (status !== 'online') {
-      setVisible(true);
-      return;
-    }
-
-    setVisible(true);
-    const timer = setTimeout(() => setVisible(false), ONLINE_BANNER_MS);
-
-    return () => clearTimeout(timer);
-  }, [status]);
+  const visible = useSelector(selectBannerVisible);
 
   if (!visible) {
     return null;

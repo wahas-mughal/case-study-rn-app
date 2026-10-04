@@ -6,11 +6,13 @@ export type NetworkStatus = 'online' | 'offline' | 'syncing';
 export type NetworkState = {
   online: boolean;
   status: NetworkStatus;
+  bannerVisible: boolean;
 };
 
 const initialState: NetworkState = {
   online: true,
   status: 'online',
+  bannerVisible: true,
 };
 
 const networkSlice = createSlice({
@@ -33,8 +35,11 @@ const networkSlice = createSlice({
         ? 'online'
         : 'offline';
     },
+    setBannerVisible(state, action: PayloadAction<boolean>) {
+      state.bannerVisible = action.payload;
+    },
   },
 });
 
-export const { setOnline, setSyncing } = networkSlice.actions;
+export const { setOnline, setSyncing, setBannerVisible } = networkSlice.actions;
 export const networkReducer = networkSlice.reducer;
